@@ -7,7 +7,7 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*; // Simplified imports
+import org.springframework.web.bind.annotation.*;
 
 import com.eventbooking.backend.model.Booking;
 import com.eventbooking.backend.model.Event;
@@ -18,7 +18,7 @@ import com.eventbooking.backend.service.FileService;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "*") // 🚀 UPDATED: Allows the Vercel frontend to communicate with Render
+// 🛑 REMOVED: @CrossOrigin(origins = "*") - This was causing the 500 error
 public class EventController {
 
     @Autowired
@@ -33,7 +33,6 @@ public class EventController {
     @Autowired
     private FileService fileService; 
 
-    // 🚀 NEW: Health Check for Render deployment
     @GetMapping("/health")
     public String healthCheck() {
         return "Backend is UP and Running for Vel Tech Event Portal!";
@@ -51,7 +50,6 @@ public class EventController {
         if (eventOptional.isPresent()) {
             Event event = eventOptional.get();
 
-            // --- EXTRAORDINARY LOGIC: GROUP VALIDATION ---
             if (!event.isGroupEvent() && bookingRequest.getTicketsBooked() > 1) {
                 return ResponseEntity.badRequest().body("Error: This event only allows Individual (Solo) entry.");
             }
@@ -64,7 +62,6 @@ public class EventController {
                 return ResponseEntity.badRequest().body("Error: Not enough tickets available. Remaining: " + event.getAvailableTickets());
             }
 
-            // --- BUSINESS LOGIC: PROCEED WITH BOOKING ---
             BigDecimal ticketPrice = BigDecimal.valueOf(event.getTicketPrice());
             BigDecimal total = ticketPrice.multiply(BigDecimal.valueOf(bookingRequest.getTicketsBooked()));
             bookingRequest.setTotalAmount(total);
@@ -78,7 +75,6 @@ public class EventController {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy hh:mm a");
             String formattedDate = event.getEventDate().format(formatter);
 
-            // --- TIER 1 DIGITAL ASSET GENERATION ---
             try {
                 String qrData = "TICKET-ID: " + savedBooking.getId() + 
                                 " | LEAD: " + savedBooking.getUserName() + 
