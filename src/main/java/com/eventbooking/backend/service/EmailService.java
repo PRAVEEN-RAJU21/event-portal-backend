@@ -4,6 +4,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -12,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClientException;
 
 @Service
 public class EmailService {
@@ -21,45 +23,55 @@ public class EmailService {
 
     private final String BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
+    /**
+     * Sends a Tier-1 Premium Digital Pass via Brevo API (Cloud Compatible).
+     */
     public void sendTicketEmail(String toEmail, String userName, String eventName, 
                                 int tickets, String venue, String dateTime, 
                                 String totalAmount, String qrCodeBase64, byte[] pdfContent, String category) {
         
         RestTemplate restTemplate = new RestTemplate();
         
-        // 1. DYNAMIC BRANDING LOGIC (Kept your design!)
+        // 1. DYNAMIC BRANDING LOGIC
         boolean isTechnical = category != null && category.equalsIgnoreCase("technical");
         String hubTitle = isTechnical ? "TECHNICAL HUB" : "NON-TECHNICAL HUB";
-        String accentColor = isTechnical ? "#00f6ff" : "#ffcc00";
+        String accentColor = isTechnical ? "#00f6ff" : "#ffcc00"; // Cyan for Tech, Yellow for Non-Tech
         String gradient = isTechnical 
             ? "linear-gradient(135deg, #00f6ff 0%, #0072ff 100%)" 
             : "linear-gradient(135deg, #ffcc00 0%, #ff8800 100%)";
 
-        // 2. HEADERS
+        // 2. PREPARE HEADERS
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("api-key", apiKey);
 
-        // 3. HTML CONTENT (Your exact template)
+        // 3. UPDATED HTML TEMPLATE
         String htmlContent = "<html><body style='margin:0; padding:0; background-color: #0a0a0a; font-family: Segoe UI, sans-serif;'>" +
             "<div style='max-width: 600px; margin: 20px auto; background: #161616; border: 1px solid #333; border-radius: 20px; overflow: hidden; color: #ffffff;'>" +
                 "<div style='background: " + gradient + "; padding: 35px; text-align: center;'>" +
                     "<h1 style='margin:0; font-size: 26px; color: #000; font-weight: 800;'>" + hubTitle + "</h1>" +
+                    "<p style='margin:5px 0 0; font-weight: 600; color: #000; opacity: 0.8;'>OFFICIAL EVENT PASS</p>" +
                 "</div>" +
                 "<div style='padding: 40px;'>" +
-                    "<h2 style='color: " + accentColor + ";'>Hello " + userName.toUpperCase() + "!</h2>" +
-                    "<div style='background: #222; border-radius: 12px; padding: 25px; border-left: 5px solid " + accentColor + ";'>" +
-                        "<p><b>Event:</b> " + eventName + "<br><b>QTY:</b> " + tickets + " Person(s)</p>" +
-                        "<p><b>Schedule:</b> " + dateTime + "<br><b>Venue:</b> " + venue + "</p>" +
-                        "<div style='text-align: center; margin-top: 20px;'>" +
-                            "<img src='cid:qrImage' width='200' height='200' />" +
+                    "<h2 style='color: " + accentColor + "; margin-top: 0;'>Hello " + userName.toUpperCase() + "!</h2>" +
+                    "<p style='color: #aaa;'>Your registration is confirmed. Below is your unique digital pass.</p>" +
+                    "<div style='background: #222; border: 1px solid #333; border-radius: 12px; padding: 25px; border-left: 5px solid " + accentColor + ";'>" +
+                        "<p><b>EVENT:</b> " + eventName + "</p>" +
+                        "<p><b>QTY:</b> " + tickets + " Person(s)</p>" +
+                        "<p><b>SCHEDULE:</b> " + dateTime + "</p>" +
+                        "<p><b>LOCATION:</b> " + venue + "</p>" +
+                        "<div style='text-align: center; margin-top: 20px; padding: 15px; background: white; border-radius: 10px; display: inline-block;'>" +
+                            "<img src='cid:qrImage' width='200' height='200' alt='Pass ID' />" +
                         "</div>" +
                     "</div>" +
                 "</div>" +
+                "<div style='background: #000; padding: 20px; text-align: center; border-top: 1px solid #333;'>" +
+                    "<p style='margin: 0; font-size: 12px; color: #666;'>Developed by <strong>Raju Praveen Kumar Reddy</strong></p>" +
+                "</div>" +
             "</div></body></html>";
 
-        // 4. ATTACHMENTS (QR Code + PDF)
-        List<Map<String, String>> attachments = new java.util.ArrayList<>();
+        // 4. PREPARE ATTACHMENTS (QR Inline + PDF File)
+        List<Map<String, String>> attachments = new ArrayList<>();
         
         // Inline QR Code
         attachments.add(Map.of(
@@ -68,17 +80,17 @@ public class EmailService {
             "contentId", "qrImage"
         ));
 
-        // PDF Ticket
+        // PDF Attachment
         if (pdfContent != null) {
             String base64Pdf = Base64.getEncoder().encodeToString(pdfContent);
-            String fileName = hubTitle.replace(" ", "") + "_Pass.pdf";
+            String fileName = hubTitle.replace(" ", "") + "_Pass_" + userName.replace(" ", "_") + ".pdf";
             attachments.add(Map.of(
                 "content", base64Pdf,
                 "name", fileName
             ));
         }
 
-        // 5. PREPARE PAYLOAD
+        // 5. BUILD PAYLOAD
         Map<String, Object> payload = new HashMap<>();
         payload.put("sender", Map.of("name", "Campus Event Portal", "email", "rajupraveenkumarrr@gmail.com"));
         payload.put("to", List.of(Map.of("email", toEmail, "name", userName)));
@@ -88,13 +100,16 @@ public class EmailService {
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
 
+        // 6. SEND REQUEST (With Specific Catch Clauses for IDE Cleanliness)
         try {
             ResponseEntity<String> response = restTemplate.postForEntity(BREVO_API_URL, request, String.class);
             if (response.getStatusCode().is2xxSuccessful()) {
                 System.out.println("✅ Email delivered via Brevo API for: " + hubTitle);
             }
+        } catch (RestClientException e) {
+            System.err.println("❌ API Connection Error: " + e.getMessage());
         } catch (Exception e) {
-            System.err.println("❌ Email Delivery Error: " + e.getMessage());
+            System.err.println("❌ Unexpected Email Error: " + e.getMessage());
         }
     }
 }
