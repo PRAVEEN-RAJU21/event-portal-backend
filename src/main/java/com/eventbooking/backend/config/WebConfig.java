@@ -10,8 +10,8 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                // Updated with your ACTUAL live Vercel link and local dev port
-                .allowedOrigins(
+                // Using patterns is safer for cloud-to-cloud connections
+                .allowedOriginPatterns(
                     "http://localhost:5173", 
                     "https://event-portal-frontend-six.vercel.app"
                 ) 
