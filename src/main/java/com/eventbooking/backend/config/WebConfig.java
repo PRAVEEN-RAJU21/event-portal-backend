@@ -1,7 +1,7 @@
-package com.eventbooking.backend.config; 
+package com.eventbooking.backend.config;
 
 import org.springframework.context.annotation.Configuration;
-import org.springframework.lang.NonNull; // Added to fix the @NonNull warning
+import org.springframework.lang.NonNull; // Required for null-safety
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -9,16 +9,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
 
     @Override
-    // Added @NonNull here to satisfy the inherited method requirements
     public void addCorsMappings(@NonNull CorsRegistry registry) {
+        // This allows all endpoints to be accessed from any origin
         registry.addMapping("/**")
-                // Using patterns is safer for cloud-to-cloud connections
-                .allowedOriginPatterns(
-                    "http://localhost:5173", 
-                    "https://event-portal-frontend-six.vercel.app"
-                ) 
+                .allowedOrigins("*") 
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("*")
-                .allowCredentials(true);
+                .allowedHeaders("*");
     }
 }
