@@ -2,10 +2,10 @@ package com.eventbooking.backend.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.config.Customizer;
 
 @Configuration
 @EnableWebSecurity
@@ -14,7 +14,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            // 1. Disable CSRF for API compatibility
+            // 1. Disable CSRF for API compatibility (required for POST requests like Login/Booking)
             .csrf(csrf -> csrf.disable())
             
             // 2. Use the CORS settings from your WebConfig.java
@@ -22,14 +22,17 @@ public class SecurityConfig {
 
             // 3. Define access rules
             .authorizeHttpRequests(auth -> auth
-                // 🔓 Public Gate: Allow scanning and verification without login
-                .requestMatchers("/api/public/**").permitAll()
+                // 🔓 Public Gates: No login required for these
+                .requestMatchers("/api/public/**", "/api/events", "/api/health").permitAll()
                 
-                // 🔓 Allow health check and event listings
-                .requestMatchers("/api/health", "/api/events").permitAll()
+                // 🔓 Explicitly allow the Admin Login path
+                .requestMatchers("/api/admin/login").permitAll() 
                 
-                // 🔓 Allow booking for now (can be restricted later)
-                .anyRequest().permitAll()
+                // 🔓 Allow booking (public-facing feature)
+                .requestMatchers("/api/book").permitAll()
+                
+                // 🔒 Lock everything else (Admin Dashboard actions)
+                .anyRequest().authenticated()
             );
 
         return http.build();
