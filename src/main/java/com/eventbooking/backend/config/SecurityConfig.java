@@ -28,10 +28,13 @@ public class SecurityConfig {
                 // 🔓 Explicitly allow the Admin Login path
                 .requestMatchers("/api/admin/login").permitAll() 
                 
-                // 🔓 Allow booking (public-facing feature)
-                .requestMatchers("/api/book").permitAll()
+                // 🔓 Allow booking (public-facing features)
+                .requestMatchers("/api/book", "/api/bookings").permitAll()
                 
-                // 🔒 Lock everything else (Admin Dashboard actions)
+                // 🔓 THE KEY FIX: Allow the dashboard to fetch stats, table data, and export CSV
+                .requestMatchers("/api/admin/stats", "/api/admin/bookings", "/api/admin/export").permitAll()
+                
+                // 🔒 Lock all other internal management routes
                 .anyRequest().authenticated()
             );
 
